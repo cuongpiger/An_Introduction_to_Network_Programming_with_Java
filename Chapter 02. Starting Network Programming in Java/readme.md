@@ -257,3 +257,229 @@ public class TCPEchoClient {
   * **Bước 7**: Tạo ra gói tin response.
   * **Bước 8**: Gửi gói tin response.
   * **Bước 8**: Đóng `DatagramSocket`.
+
+###### UDPEchoServer.java _[source code](UDPEchoServer.java)_
+```java
+import java.io.*;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
+
+public class UDPEchoServer {
+    private static final int PORT = 1234;
+    private static DatagramSocket datagram_socket;
+    private static DatagramPacket in_packet, out_packet;
+    private static byte[] buffer;
+
+    public static void handleClient() {
+        try {
+            String message_in, message_out;
+            int num_messages = 0;
+            InetAddress client_address = null;
+            int client_port;
+
+            do {
+                buffer = new byte[256]; // bước 2
+                in_packet = new DatagramPacket(buffer, buffer.length); // bước 3
+                datagram_socket.receive(in_packet); // bước 4
+                client_address = in_packet.getAddress(); // bước 5
+                client_port = in_packet.getPort(); // bước 6
+
+                message_in = new String(in_packet.getData(), 0, in_packet.getLength()); // bước 6
+                System.out.println(">> Message received...");
+                message_out = ">> Message " + ++num_messages + ". " + message_in;
+
+                out_packet = new DatagramPacket(message_out.getBytes(), message_out.length(), client_address, client_port); // bước 7
+                datagram_socket.send(out_packet); // bước 8
+            } while (true);
+        } catch (IOException err) {
+            err.printStackTrace();
+        } finally {
+            System.out.println(">> Closing connection...");
+            datagram_socket.close(); // bước 9
+        }
+    }
+
+    public static void main(String[] args) {
+        System.out.println(">> Opening port " + PORT + "...");
+
+        try {
+            datagram_socket = new DatagramSocket(PORT);
+        } catch (SocketException err) {
+            System.out.println("==> Unable to open port " + PORT); // bước 1
+            System.exit(1);
+        }
+
+        handleClient();
+    }
+}
+```
+![](../images/02_04.png)
+
+<hr>
+
+* Tiếp theo ta sẽ tiến hành thiết lập cho phía client, bao gồm 8 bước:
+  * **Bước 1**: Tạo ra object `DatagramSocket`
+  * **Bước 2**: Tạo gói tin gửi đi.
+  * **Bước 3**: Gửi gói tin gửi đi.
+  * **Bước 4**: Nhận buffer từ gói tin trả về.
+  * **Bước 5**: Tạo object `DatagramPacket` cho gói tin trả về.
+  * **Bước 6**: Chấp nhận gói tin trả về.
+  * **Bước 7**: Lấy dữ liệu từ buffer.
+  * **Bước 8**: Đóng kết nối `DatagramSocket`
+
+* Nên nhớ phải chạy server trc sau đó mới chạy client, dưới đây là code demo cho client:
+###### UDPEchoClient.java _[source code](UDPEchoClient.java)_
+```java
+import java.io.*;
+import java.net.*;
+import java.util.*;
+
+public class UDPEchoClient {
+    private static InetAddress host;
+    private static final int PORT = 1234;
+    private static DatagramSocket datagram_socket;
+    private static DatagramPacket in_packet, out_packet;
+    private static byte[] buffer;
+
+    private static void accessServer() {
+        try {
+            datagram_socket = new DatagramSocket(); // bước 1
+            Scanner user_entry = new Scanner(System.in);
+            String message = "", response = "";
+
+            do {
+                System.out.print("Enter message: ");
+                message = user_entry.nextLine();
+
+                if (!message.equals("***CLOSE***")) {
+                    out_packet = new DatagramPacket(message.getBytes(), message.length(), host, PORT); // bước 2
+                    datagram_socket.send(out_packet); // bước 3
+                    buffer = new byte[256]; // bước 4
+                    in_packet = new DatagramPacket(buffer, buffer.length); // bước 5
+                    datagram_socket.receive(in_packet); // bước 6
+                    response = new String(in_packet.getData(), 0, in_packet.getLength()); // bước 7
+
+                    System.out.println(">> SERVER: " + response);
+                }
+            } while (!message.equals("***CLOSE***"));
+        } catch (IOException err) {
+            err.printStackTrace();
+        } finally {
+            System.out.println(">> Closing connection...");
+            datagram_socket.close(); // bước 8
+        }
+    }
+
+    public static void main(String[] args) {
+        try {
+            host = InetAddress.getLocalHost();
+        } catch (UnknownHostException err) {
+            System.out.println("==> Host ID not found!");
+            System.exit(1);
+        }
+
+        accessServer();
+    }
+}
+```
+![](../images/02_05.png)
+
+# 3. Networking Programming with GUIs
+* Dưới đây là chương trình GUI cho phép nhập vào IP hoăc hostname của server sau đó nhấn button *Get date and time* server sau đó sẽ trả về ngày giờ hiện tại của server.
+
+###### GetRemoteTime.java _[source code](GetRemoteTime.java)_
+```java
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.net.*;
+import java.io.*;
+import java.util.*;
+
+public class GetRemoteTime extends JFrame implements ActionListener {
+    private JTextField host_input;
+    private JTextArea display;
+    private JButton time_btn;
+    private JButton exit_btn;
+    private JPanel button_pnl;
+    private static Socket socket = null;
+
+    public GetRemoteTime() {
+        host_input = new JTextField(20);
+        add(host_input, BorderLayout.NORTH);
+
+        display = new JTextArea(10, 15);
+        display.setWrapStyleWord(true);
+        display.setLineWrap(true);
+        add(new JScrollPane(display), BorderLayout.CENTER);
+
+        button_pnl = new JPanel();
+        time_btn = new JButton("Get date and time");
+        time_btn.addActionListener(this);
+        button_pnl.add(time_btn);
+
+        exit_btn = new JButton("Exit");
+        exit_btn.addActionListener(this);
+        button_pnl.add(exit_btn);
+        add(button_pnl, BorderLayout.SOUTH);
+    }
+
+    public void actionPerformed(ActionEvent ev) {
+        if (ev.getSource() == exit_btn) {
+            System.exit(0);
+        }
+
+        String the_time;
+        String host = host_input.getText();
+        final int DAYTIME_PORT = 13;
+
+        try {
+            socket = new Socket(host, DAYTIME_PORT);
+            Scanner input = new Scanner(socket.getInputStream());
+            the_time = input.nextLine();
+            display.append("The date/time at " + host + " is " + the_time + "\n");
+            host_input.setText("");
+        } catch (UnknownHostException err) {
+            display.append("==> No such host!\n");
+            host_input.setText("");
+        } catch (IOException err) {
+            display.append(err.toString() + "\n");
+        } finally {
+            try {
+                if (socket != null) {
+                    socket.close();
+                }
+            } catch (IOException err) {
+                System.out.println("==> Unable to disconnect!");
+                System.exit(1);
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        GetRemoteTime frame = new GetRemoteTime();
+        frame.setSize(400, 300);
+        frame.setVisible(true);
+        frame.addWindowListener(
+            new WindowAdapter() {
+                public void windowClosing(WindowEvent ev) {
+                    // check whether a socket is open
+                    if (socket != null) {
+                        try {
+                            socket.close();
+                        } catch (IOException err) {
+                            System.out.println("==> Unable to close link!");
+                            System.exit(1);
+                        }
+                    }
+
+                    System.exit(0);
+                }
+            }
+        );
+    }
+}
+```
