@@ -434,7 +434,7 @@ public class GetRemoteTime extends JFrame implements ActionListener {
 
         String the_time;
         String host = host_input.getText();
-        final int DAYTIME_PORT = 13;
+        final int DAYTIME_PORT = 1234;
 
         try {
             socket = new Socket(host, DAYTIME_PORT);
@@ -483,3 +483,41 @@ public class GetRemoteTime extends JFrame implements ActionListener {
     }
 }
 ```
+![](../images/02_06.png)
+> * Ko thể truy cập dc do server chưa chạy.
+
+###### DaytimeServer.java _[source code](DaytimeServer.java)_
+```java
+
+import java.net.*;
+import java.io.*;
+import java.util.Date;
+
+public class DaytimeServer {
+    public static void main(String[] args) {
+        ServerSocket server;
+        final int DAYTIME_PORT = 1234;
+        Socket socket;
+
+        try {
+            server = new ServerSocket(DAYTIME_PORT);
+            System.out.println(">> Server is running on port " + DAYTIME_PORT + "...");
+
+            do {
+                socket = server.accept();
+
+                PrintWriter output = new PrintWriter(socket.getOutputStream(), true);
+                Date date = new Date();
+                output.println(date);
+                socket.close();
+            } while (true);
+        } catch (IOException err) {
+            System.out.println("==> " + err);
+        }
+    }
+}
+```
+
+* Nhớ phải chạy server trc.
+
+![](../images/02_07.png)

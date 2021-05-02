@@ -43,7 +43,7 @@ public class GetRemoteTime extends JFrame implements ActionListener {
 
         String the_time;
         String host = host_input.getText();
-        final int DAYTIME_PORT = 13;
+        final int DAYTIME_PORT = 1234;
 
         try {
             socket = new Socket(host, DAYTIME_PORT);
