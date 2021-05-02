@@ -15,15 +15,21 @@ public class TCPEchoServer {
             PrintWriter output = new PrintWriter(link.getOutputStream(), true); // bước 3
 
             int num_messages = 0;
-            String message = input.nextLine(); // bước 4
+            String message; // bước 4
 
-            while (!message.equals("***CLOSE***")) {
-                System.out.println(">> Message received...");
-                output.println(">> Message " + ++num_messages + ". " + message); // bước 4
+            while (true) {
                 message = input.nextLine();
+
+                if (message.equals("***CLOSE***")) {
+                    output.println(">> Number of messages received: " + num_messages); // bước 4
+
+                    break;
+                }
+
+                System.out.println(">> Message received...");
+                output.println(++num_messages + ". " + message); // bước 4
             }
 
-            output.println(">> Number of messages received: " + num_messages); // bước 4
         } catch (IOException err) {
             err.printStackTrace();
         } finally {

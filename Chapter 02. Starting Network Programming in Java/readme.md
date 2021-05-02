@@ -76,9 +76,9 @@ public class MyLocalIPAddress {
     String input = input.nextLine(); // nhận dữ liệu
     ```
   * **Bước 5**: Đóng kết nối _(sau khi đã hoàn thành cuộc **"đối thoại"**)_.
-  ```java
-  link.close();
-  ```
+    ```java
+    link.close();
+    ```
 * Dưới đây là một ví dụ minh họa cho 5 bước trên:
   * Một server tiến hành nhận các tin nhắn từ client, các tin nhắn mà client gửi đến sẽ dc server đánh số và gửi lại client tin nhắn này kèm theo số dc đánh cho tin nhắn đó. Server và client sẽ luân phiên gửi qua gửi lại như vậy cho đến khi client gửi tin nhắn '***CLOSE***' khi muốn dừng kết nối. Khi máy chủ nhận dc tin nhắn muốn đóng kết nối này, server sẽ tiến hành đóng kết nối đến client này.
 * Dưới đây là code demo cho toàn bộ những lí thuyết trên, cụ thể tiến hành mở một port 1234 và chờ một kết nối từ client nào đó:
@@ -101,15 +101,21 @@ public class TCPEchoServer {
             PrintWriter output = new PrintWriter(link.getOutputStream(), true); // bước 3
 
             int num_messages = 0;
-            String message = input.nextLine(); // bước 4
+            String message; // bước 4
 
-            while (!message.equals("***CLOSE***")) {
-                System.out.println(">> Message received...");
-                output.println(">> Message " + ++num_messages + ". " + message); // bước 4
+            while (true) {
                 message = input.nextLine();
+
+                if (message.equals("***CLOSE***")) {
+                    output.println(">> Number of messages received: " + num_messages); // bước 4
+
+                    break;
+                }
+
+                System.out.println(">> Message received...");
+                output.println(++num_messages + ". " + message); // bước 4
             }
 
-            output.println(">> Number of messages received: " + num_messages); // bước 4
         } catch (IOException err) {
             err.printStackTrace();
         } finally {
@@ -140,3 +146,77 @@ public class TCPEchoServer {
 }
 ```
 ![](../images/02_02.png)
+
+<hr>
+
+* Bây giờ chúng ta sẽ tiến hành thiết lập cho client, bao gồm 4 bước:
+  * **Bước 1**: Thiếp lập kết nối đến máy chủ.
+    * Chúng ta cần tạo ra một socket object, bao gồm **hai đối số**:
+      * Địa chỉ IP của server.
+      * Port mà server cung cấp dịch vụ mà client cần.
+    * Để đơn giản, chúng ta sẽ đặt server và client trên cùng một máy chủ, điều này sẽ cho phép truy xuất dễ dàng đến địa chỉ IP thông qua p.thức `InetAddress.getLocalHost`. Ví dụ:
+      ```java
+      Socket link = new Socket(InetAddress.getLocalHost(), 1234);
+      ```
+  * **Bước 2**: Thiếp lập input và output stream.
+    * Làm tương tự như cách ta làm cho server.
+  * **Bước 3**: Gửi và nhận dữ liệu.
+    * Tương tư cách làm ở server.
+  * **Bước 4**: Đóng kết nối.
+    * Tương tự như server luôn 😅.
+* Dưới đây là code demo, lưu ý ta cần phải khởi chạy server trc sau đó mới chạy client, nếu ko sẽ xảy ra lỗi.
+
+###### TCPEchoClient.java _[source code](TCPEchoClient.java)_
+```java
+import java.net.*;
+import java.io.*;
+import java.util.*;
+
+public class TCPEchoClient {
+    private static InetAddress host;
+    private static final int PORT = 1234;
+
+    private static void accessServer() {
+        Socket link = null; // bước 1
+
+        try {
+            link = new Socket(host, PORT); // bước 1
+            Scanner input = new Scanner(link.getInputStream()); // bước 2
+            PrintWriter output = new PrintWriter(link.getOutputStream(), true); // bước 2
+            Scanner user_entry = new Scanner(System.in);
+
+            String message, response;
+
+            do {
+                System.out.print(">> Enter your message: ");
+                message = user_entry.nextLine();
+                output.println(message); // bước 3
+                response = input.nextLine(); // bước 3
+                System.out.println(">> SERVER: " + response);
+            } while (!message.equals("***CLOSE***"));
+        } catch (IOException err) {
+            err.printStackTrace();
+        } finally {
+            try {
+                System.out.println(">> Closing connection...");
+                link.close();
+            } catch (IOException err) {
+                System.out.println("==> Unable to disconnect!");
+                System.exit(1);
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        try {
+            host = InetAddress.getLocalHost();
+        } catch (UnknownHostException err) {
+            System.out.println("==> Host ID not found...");
+            System.exit(1);
+        }
+
+        accessServer();
+    }
+}
+```
+![](../images/02_03.png)
