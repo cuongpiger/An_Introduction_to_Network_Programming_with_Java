@@ -220,3 +220,40 @@ public class TCPEchoClient {
 }
 ```
 ![](../images/02_03.png)
+
+## 2.2. Datagram (UDP) Sockets
+* Không giống như TCP/IP, UDP là **ko kết nối**. Điều này có nghĩa là kết nối giữa server và client ko dc duy trì trog suốt thời gian của cuộc hội thoại. Thay vào đó các gói của UDP sẽ dc gửi đi chỉ khi cần thiết.
+* Vì kết nối ko dc duy trì giữa các phiên, cho nên server ko cần phải tạo một object socket riêng biệt cho từng client như đã làm cho TCP/IP. Thay vì tạo một object `ServerSocket`, server sẽ tạo một object `DatagramSocket`.
+* Trc tiên, ta sẽ thiết lập ở phía server trc, bao gồm 9 bước:
+  * **Bước 1**: Tạo ra object `DatagramSocket` với đối số là port.
+    ```java
+    DatagramSocket datagram_socket = new DatagramSocket(1234);
+    ``` 
+  * **Bước 2**: Tạo bộ đệm cho các gói tin.
+    ```java
+    byte[] buffer = new byte[256];
+    ```
+  * **Bước 3**: Tạo object `DatagramPacket` cho các gói dữ liệu đến, gồm hai đối số là mảng `buffer` và kích thước của mảng `buffer` này.
+    ```java
+    DatagramPacket in_packet = new DatagramPacket(buffer, buffer.length);
+    ```
+  * **Bước 4**: Chấp nhận các gói tin đến.
+    ```java
+    datagram_socket.receive(in_packet);
+    ```
+  * **Bước 5**: Chấp nhận IP và port của client gửi gói tin.
+    ```java
+    InetAddress client_address = in_packet.getAddress();
+    int client_port = in_packet.getPort();
+    ```   
+  * **Bước 6**: Nhận dữ liệu từ `in_packet`.
+    * Để thuận tiện cho việc xử lí, dữ liệu sẽ dc casting sang `String` bằng cách sử dụng overloading-constructor của `String` gồm 3 đối số:
+      * `in_packet`.
+      * vị trí bắt đầu cast trong `in_packet`, ở đây luôn là 0.
+      * số byte cần lấy, luôn là `in_packet.getLength()`.    
+      ```java
+      String message = new String(in_packet.getData(), 0, in_packet.getLength());
+      ``` 
+  * **Bước 7**: Tạo ra gói tin response.
+  * **Bước 8**: Gửi gói tin response.
+  * **Bước 8**: Đóng `DatagramSocket`.
