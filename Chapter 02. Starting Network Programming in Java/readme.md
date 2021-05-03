@@ -522,7 +522,7 @@ public class DaytimeServer {
 
 ![](../images/02_07.png)
 
-< hr>
+<hr>
 
 * Dưới đây là chương trình dùng để quét các cổng port đang mở trên server.
 ###### PortScanner.java _[source code](PortScanner.java)_
