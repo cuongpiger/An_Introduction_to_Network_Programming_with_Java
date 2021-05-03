@@ -521,3 +521,284 @@ public class DaytimeServer {
 * Nhớ phải chạy server trc.
 
 ![](../images/02_07.png)
+
+< hr>
+
+* Dưới đây là chương trình dùng để quét các cổng port đang mở trên server.
+###### PortScanner.java _[source code](PortScanner.java)_
+```java
+import java.awt.*;
+import java.awt.event.*;
+import javax.swing.*;
+import java.net.*;
+import java.io.*;
+
+public class PortScanner extends JFrame implements ActionListener {
+    private JLabel prompt;
+    private JTextField host_input;
+    private JTextArea report;
+    private JButton seek_btn, exit_btn;
+    private JPanel host_pnl, button_pnl;
+    private static Socket socket = null;
+
+    public PortScanner() {
+        host_pnl = new JPanel();
+        prompt = new JLabel("Host name: ");
+        host_input = new JTextField("rosie", 25);
+        host_pnl.add(prompt);
+        host_pnl.add(host_input);
+        add(host_pnl, BorderLayout.NORTH);
+        report = new JTextArea(10, 25);
+        add(report, BorderLayout.CENTER);
+        button_pnl = new JPanel();
+        seek_btn = new JButton("Seek server ports");
+        seek_btn.addActionListener(this);
+        button_pnl.add(seek_btn);
+        exit_btn = new JButton("Exit");
+        exit_btn.addActionListener(this);
+        button_pnl.add(exit_btn);
+        add(button_pnl, BorderLayout.SOUTH);
+    }
+
+    public void actionPerformed(ActionEvent event) {
+        if (event.getSource() == exit_btn)
+            System.exit(0);
+
+        report.setText("");
+        String host = host_input.getText();
+        try {
+            InetAddress theAddress = InetAddress.getByName(host);
+            report.append(">> IP address: " + theAddress + "\n");
+            for (int i = 1234; i < 1245; i++) {
+                try {
+                    socket = new Socket(host, i);
+                    report.append(">> There is a server on port " + i + ".\n");
+                    socket.close();
+                } catch (IOException err) { }
+            }
+        } catch (UnknownHostException uhEx) {
+            report.setText("==> Unknown host!");
+        }
+    }
+
+    public static void main(String[] args) {
+        PortScanner frame = new PortScanner();
+        frame.setSize(400, 300);
+        frame.setVisible(true);
+        frame.addWindowListener(
+                new WindowAdapter() {
+                    public void windowClosing(WindowEvent event) { // check whether a socket is open…
+                        if (socket != null) {
+                            try {
+                                socket.close();
+                            } catch (IOException err) {
+                                System.out.println("==> Unable to close link!\n");
+                                System.exit(1);
+                            }
+                        }
+                        System.exit(0);
+                    }
+                }
+        );
+    }
+}
+```
+![](../images/02_08.png)
+
+<hr>
+
+* Dưới đây là chương trình dùng để nhắn tin giữa hai người.
+###### EmailServer.java _[source code](EmailServer.java)_
+```java
+import java.io.*;
+import java.net.*;
+import java.util.*;
+
+class InvalidClientException extends Exception {
+    public InvalidClientException() {
+        super("==> Invalid client name!");
+    }
+
+    public InvalidClientException(String message) {
+        super(message);
+    }
+}
+
+class InvalidRequestException extends Exception {
+    public InvalidRequestException() {
+        super("==> Invalid request!");
+    }
+
+    public InvalidRequestException(String message) {
+        super(message);
+    }
+}
+
+public class EmailServer {
+    private static ServerSocket server_socket;
+    private static final int PORT = 1234;
+    private static final String client1 = "Naruto";
+    private static final String client2 = "Sasuke";
+    private static final int MAX_MESSAGES = 10;
+    private static String[] mailbox1 = new String[MAX_MESSAGES];
+    private static String[] mailbox2 = new String[MAX_MESSAGES];
+    private static int message_inbox1 = 0;
+    private static int message_inbox2 = 0;
+
+
+    private static void runService() throws InvalidClientException, InvalidRequestException {
+        try {
+            Socket link = server_socket.accept();
+            Scanner input = new Scanner(link.getInputStream());
+            PrintWriter output = new PrintWriter(link.getOutputStream(), true);
+            String name = input.nextLine();
+            String send_read = input.nextLine();
+
+            if (!name.equals(client1) && !name.equals(client2)) throw new InvalidClientException();
+
+            if (!send_read.equals("send") && !send_read.equals("read")) throw new InvalidRequestException();
+
+            System.out.println("\n>> " + name + " " + send_read + "ing mail...");
+
+            if (name.equals(client1)) {
+                if (send_read.equals("send")) {
+                    doSend(mailbox2, message_inbox2, input);
+                    message_inbox2 += message_inbox2 < MAX_MESSAGES ? 1 : 0;
+                } else {
+                    doRead(mailbox1, message_inbox1, output);
+                    message_inbox1 = 0;
+                }
+            } else { // from `client2`
+                if (send_read.equals("send")) {
+                    doSend(mailbox1, message_inbox1, input);
+                    message_inbox1 += message_inbox1 < MAX_MESSAGES ? 1 : 0;
+                } else {
+                    doRead(mailbox2, message_inbox2, output);
+                    message_inbox2 = 0;
+                }
+
+                link.close();
+            }
+        } catch (IOException err) {
+            err.printStackTrace();
+        }
+    }
+
+    private static void doSend(String[] mailbox, int message_inbox, Scanner input) {
+        String message = input.nextLine();
+
+        if (message_inbox == MAX_MESSAGES) {
+            System.out.println("<< Message box full!");
+        } else {
+            mailbox[message_inbox] = message;
+        }
+    }
+
+    private static void doRead(String[] mailbox, int message_inbox, PrintWriter output) {
+        System.out.println(">>\nSending " + message_inbox + " message(s).\n");
+        output.println(message_inbox);
+        for (int i = 0; i < message_inbox; ++i) {
+            output.println(mailbox[i]);
+        }
+    }
+
+    public static void main(String[] args) {
+        System.out.println(">> Opening connection on port " + PORT);
+
+        try {
+            server_socket = new ServerSocket(PORT);
+        } catch (IOException err) {
+            System.out.println("==> Unable to attach to port!");
+            System.exit(1);
+        }
+
+        do {
+            try {
+                runService();
+            } catch (InvalidClientException err) {
+                System.out.println("==> ERROR: " + err);
+            } catch (InvalidRequestException err) {
+                System.out.println("==> ERROR: err");
+            }
+        } while (true);
+    }
+}
+```
+
+###### EmailClient.java _[source code](EmailClient.java)_
+```java
+import java.io.*;
+import java.net.*;
+import java.util.*;
+
+public class EmailClient {
+    private static InetAddress host;
+    private static final int PORT = 1234;
+    private static String name;
+    private static Scanner network_input, user_entry;
+    private static PrintWriter network_output;
+
+    private static void talkToServer() throws IOException {
+        Socket link = null;
+
+        try {
+            link = new Socket(host, PORT);
+            network_input = new Scanner(link.getInputStream());
+            network_output = new PrintWriter(link.getOutputStream(), true);
+            user_entry = new Scanner(System.in);
+
+            String option;
+
+            do {
+                System.out.print(">> Would you like to 'send' or 'read' ('n' to disconnect): ");
+                option = user_entry.nextLine().trim().toLowerCase();
+
+                if (option.equals("send")) {
+                    doSend();
+                } else if (option.equals("read")) {
+                    doRead();
+                }
+            } while (!option.equals("n"));
+        } catch (IOException err) {
+            err.printStackTrace();
+        } finally {
+            try {
+                System.out.println(">> Closing connection...");
+                link.close();
+            } catch (IOException err) {
+                System.out.println("==> Unable to disconnect");
+                System.exit(1);
+            }
+        }
+    }
+
+    private static void doSend() {
+        System.out.print("\n>> Enter one-line message: ");
+        String message = user_entry.nextLine();
+        network_output.println(">> " + name + " send: " + message);
+    }
+
+    private static void doRead() throws IOException {
+        String response = network_input.nextLine();
+        System.out.println(">> SERVER: " + response);
+    }
+
+    public static void main(String[] args) throws IOException {
+        try {
+            host = InetAddress.getLocalHost();
+        } catch (UnknownHostException err) {
+            System.out.println("==> Host ID not found");
+            System.exit(1);
+        }
+
+        user_entry = new Scanner(System.in);
+
+        do {
+            System.out.print("Enter name('Naruto' or 'Sasuke'): ");
+            name = user_entry.nextLine();
+        } while (!name.equals("Naruto") && !name.equals("Sasuke"));
+
+        talkToServer();
+    }
+}
+```
