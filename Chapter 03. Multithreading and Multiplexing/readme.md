@@ -44,3 +44,128 @@ public class ThreadShowName extends Thread {
 }
 ```
 ![](../images/03_00.png)
+
+<hr>
+
+* Ví dụ dưới đây ta sẽ tiến hành xây dựng hai thread, nhưng trong đó một thread sẽ hiển thị "Hello" 5 lần và thread còn lại sẽ đếm từ 0 đến 4.
+###### [ThreadHelloCount.java](ThreadHelloCount.java)
+```java
+class HelloThread extends Thread {
+    public void run() {
+        int pause;
+
+        for (int i = 0; i < 5; ++i) {
+            try {
+                System.out.println(">> Hello!");
+                pause = (int)(Math.random() * 3000);
+                sleep(pause);
+            } catch (InterruptedException err) {
+                System.out.println("==> " + err);
+            }
+        }
+    }
+}
+
+class CountThread extends Thread {
+    public void run() {
+        int pause;
+
+        for (int i = 0; i < 5; ++i) {
+            try {
+                System.out.println(">> " + i);
+                pause = (int)(Math.random() * 3_000);
+                sleep(pause);
+            } catch (InterruptedException err) {
+                System.out.println("==> " + err);
+            }
+        }
+    }
+}
+
+public class ThreadHelloCount {
+    public static void main(String[] args) {
+        HelloThread hello = new HelloThread();
+        CountThread count = new CountThread();
+
+        hello.start();
+        count.start();
+    }
+}
+```
+![](../images/03_01.png)
+
+## 2.2. Explicitly Implementing the Runnable Interface
+* Dưới đây là code lại [ThreadShowName.java](ThreadShowName.java) theo style `Runnable`.
+###### [RunnableShowName.java](RunnableShowName.java)
+```java
+public class RunnableShowName implements Runnable {
+    public void run() {
+        int pause;
+
+        for (int i = 0; i < 10; ++i) {
+            try {
+                pause = (int)(Math.random() * 3000);
+                System.out.println(">> " + Thread.currentThread().getName() + " sleeping in " + pause + " miliseconds");
+                Thread.sleep(pause);
+            } catch (InterruptedException err) {
+                System.out.println("==> " + err);
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        Thread thread1 = new Thread(new RunnableShowName());
+        Thread thread2 = new Thread(new RunnableShowName());
+
+        /*
+        // Cách khai báo khác
+        RunnableShowName runnable1 = new RunnableShowName();
+        RunnableShowName runnable2 = new RunnableShowName();
+
+        Thread thread1 = new Thread(runnable1);
+        Thread thread2 = new Thread(runnable2);
+         */
+
+        thread1.start();
+        thread2.start();
+    }
+}
+```
+![](../images/03_02.png)
+
+<hr>
+
+* Cũng là code lại [ThreadShowName.java](ThreadShowName.java) theo một style `Runnable` constructor.
+###### [RunnableHelloCount.java](RunnableHelloCount.java)
+```java
+public class RunnableHelloCount implements Runnable {
+    private Thread thread1, thread2;
+
+    public RunnableHelloCount() {
+        thread1 = new Thread(this);
+        thread2 = new Thread(this);
+
+        thread1.start();
+        thread2.start();
+    }
+
+    public void run() {
+        int pause;
+
+        for (int i = 0; i < 10; ++i) {
+            try {
+                pause = (int) (Math.random() * 3_000);
+                System.out.println(">> " + Thread.currentThread().getName() + " sleeping in " + pause + " miliseconds");
+                Thread.sleep(pause);
+            } catch (InterruptedException err) {
+                System.out.println("==> " + err);
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        RunnableHelloCount hello = new RunnableHelloCount();
+    }
+}
+```
+![](../images/03_03.png)
