@@ -256,7 +256,7 @@ public class TCPEchoClient {
       ``` 
   * **Bước 7**: Tạo ra gói tin response.
   * **Bước 8**: Gửi gói tin response.
-  * **Bước 8**: Đóng `DatagramSocket`.
+  * **Bước 9**: Đóng `DatagramSocket`.
 
 ###### UDPEchoServer.java _[source code](UDPEchoServer.java)_
 ```java
