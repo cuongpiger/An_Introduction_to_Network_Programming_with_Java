@@ -21,15 +21,18 @@ public class EmailClient {
             String option;
 
             do {
-                System.out.print(">> Would you like to 'send' or 'read' ('n' to disconnect): ");
+                System.out.print("\n>> Would you like to 'send' or 'read' ('close' to disconnect): ");
                 option = user_entry.nextLine().trim().toLowerCase();
 
                 if (option.equals("send")) {
                     doSend();
                 } else if (option.equals("read")) {
                     doRead();
+                } else if (option.equals("close")) { // send disconnect signal
+                    network_output.println(name);
+                    network_output.println("close");
                 }
-            } while (!option.equals("n"));
+            } while (!option.equals("close"));
         } catch (IOException err) {
             err.printStackTrace();
         } finally {
@@ -44,14 +47,21 @@ public class EmailClient {
     }
 
     private static void doSend() {
-        System.out.print("\n>> Enter one-line message: ");
+        System.out.print(">> Enter one-line message: ");
         String message = user_entry.nextLine();
-        network_output.println(">> " + name + " send: " + message);
+        network_output.println(name);
+        network_output.println("send");
+        network_output.println(message);
     }
 
     private static void doRead() throws IOException {
-        String response = network_input.nextLine();
-        System.out.println(">> SERVER: " + response);
+        network_output.println(name);
+        network_output.println("read");
+
+        int no_messages = Integer.parseInt(network_input.nextLine());
+        while (no_messages-- > 0) {
+            System.out.println("   > " + network_input.nextLine());
+        }
     }
 
     public static void main(String[] args) throws IOException {
@@ -66,7 +76,7 @@ public class EmailClient {
 
         do {
             System.out.print("Enter name('Naruto' or 'Sasuke'): ");
-            name = user_entry.nextLine();
+            name = user_entry.nextLine().trim();
         } while (!name.equals("Naruto") && !name.equals("Sasuke"));
 
         talkToServer();

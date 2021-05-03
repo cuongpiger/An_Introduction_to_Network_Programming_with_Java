@@ -30,7 +30,6 @@ public class EmailClient {
                     doRead();
                 } else if (option.equals("close")) { // send disconnect signal
                     network_output.println(name);
-                    network_output.println("send");
                     network_output.println("close");
                 }
             } while (!option.equals("close"));
@@ -56,8 +55,13 @@ public class EmailClient {
     }
 
     private static void doRead() throws IOException {
-        String response = network_input.nextLine();
-        System.out.println(">> SERVER: " + response);
+        network_output.println(name);
+        network_output.println("read");
+
+        int no_messages = Integer.parseInt(network_input.nextLine());
+        while (no_messages-- > 0) {
+            System.out.println("   > " + network_input.nextLine());
+        }
     }
 
     public static void main(String[] args) throws IOException {
@@ -72,7 +76,7 @@ public class EmailClient {
 
         do {
             System.out.print("Enter name('Naruto' or 'Sasuke'): ");
-            name = user_entry.nextLine();
+            name = user_entry.nextLine().trim();
         } while (!name.equals("Naruto") && !name.equals("Sasuke"));
 
         talkToServer();

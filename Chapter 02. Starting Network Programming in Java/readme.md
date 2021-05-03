@@ -651,51 +651,58 @@ public class EmailServer {
             Socket link = server_socket.accept();
             Scanner input = new Scanner(link.getInputStream());
             PrintWriter output = new PrintWriter(link.getOutputStream(), true);
-            String name = input.nextLine();
-            String send_read = input.nextLine();
+            String name, signal;
 
-            if (!name.equals(client1) && !name.equals(client2)) throw new InvalidClientException();
+            while (true) {
+                name = input.nextLine().trim();
+                signal = input.nextLine().trim();
 
-            if (!send_read.equals("send") && !send_read.equals("read")) throw new InvalidRequestException();
+                if (!name.equals(client1) && !name.equals(client2)) throw new InvalidClientException();
 
-            System.out.println("\n>> " + name + " " + send_read + "ing mail...");
+                if (!signal.equals("send") && !signal.equals("read") && !signal.equals("close"))
+                    throw new InvalidRequestException();
 
-            if (name.equals(client1)) {
-                if (send_read.equals("send")) {
-                    doSend(mailbox2, message_inbox2, input);
-                    message_inbox2 += message_inbox2 < MAX_MESSAGES ? 1 : 0;
-                } else {
-                    doRead(mailbox1, message_inbox1, output);
-                    message_inbox1 = 0;
-                }
-            } else { // from `client2`
-                if (send_read.equals("send")) {
-                    doSend(mailbox1, message_inbox1, input);
-                    message_inbox1 += message_inbox1 < MAX_MESSAGES ? 1 : 0;
-                } else {
-                    doRead(mailbox2, message_inbox2, output);
-                    message_inbox2 = 0;
+                if (signal.equals("close")) {
+                    System.out.println(">> Closing connection to " + name);
+                    break;
                 }
 
-                link.close();
+                System.out.println(">> " + name + " " + signal + "ing mail...");
+                if (name.equals(client1)) {
+                    if (signal.equals("send")) {
+                        doSend(mailbox2, message_inbox2, name, input);
+                        message_inbox2 += message_inbox2 < MAX_MESSAGES ? 1 : 0;
+                    } else {
+                        doRead(mailbox1, message_inbox1, output);
+                        message_inbox1 = 0;
+                    }
+                } else { // from `client2`
+                    if (signal.equals("send")) {
+                        doSend(mailbox1, message_inbox1, name, input);
+                        message_inbox1 += message_inbox1 < MAX_MESSAGES ? 1 : 0;
+                    } else {
+                        doRead(mailbox2, message_inbox2, output);
+                        message_inbox2 = 0;
+                    }
+                }
             }
         } catch (IOException err) {
             err.printStackTrace();
         }
     }
 
-    private static void doSend(String[] mailbox, int message_inbox, Scanner input) {
-        String message = input.nextLine();
+    private static void doSend(String[] mailbox, int message_inbox, String name, Scanner input) {
+        String message = input.nextLine().trim();
 
         if (message_inbox == MAX_MESSAGES) {
             System.out.println("<< Message box full!");
         } else {
-            mailbox[message_inbox] = message;
+            mailbox[message_inbox] = name + ": " + message;
         }
     }
 
     private static void doRead(String[] mailbox, int message_inbox, PrintWriter output) {
-        System.out.println(">>\nSending " + message_inbox + " message(s).\n");
+        System.out.println(">> Sending " + message_inbox + " message(s).");
         output.println(message_inbox);
         for (int i = 0; i < message_inbox; ++i) {
             output.println(mailbox[i]);
@@ -718,7 +725,7 @@ public class EmailServer {
             } catch (InvalidClientException err) {
                 System.out.println("==> ERROR: " + err);
             } catch (InvalidRequestException err) {
-                System.out.println("==> ERROR: err");
+                System.out.println("==> ERROR: " + err);
             }
         } while (true);
     }
@@ -750,15 +757,18 @@ public class EmailClient {
             String option;
 
             do {
-                System.out.print(">> Would you like to 'send' or 'read' ('n' to disconnect): ");
+                System.out.print("\n>> Would you like to 'send' or 'read' ('close' to disconnect): ");
                 option = user_entry.nextLine().trim().toLowerCase();
 
                 if (option.equals("send")) {
                     doSend();
                 } else if (option.equals("read")) {
                     doRead();
+                } else if (option.equals("close")) { // send disconnect signal
+                    network_output.println(name);
+                    network_output.println("close");
                 }
-            } while (!option.equals("n"));
+            } while (!option.equals("close"));
         } catch (IOException err) {
             err.printStackTrace();
         } finally {
@@ -773,14 +783,21 @@ public class EmailClient {
     }
 
     private static void doSend() {
-        System.out.print("\n>> Enter one-line message: ");
+        System.out.print(">> Enter one-line message: ");
         String message = user_entry.nextLine();
-        network_output.println(">> " + name + " send: " + message);
+        network_output.println(name);
+        network_output.println("send");
+        network_output.println(message);
     }
 
     private static void doRead() throws IOException {
-        String response = network_input.nextLine();
-        System.out.println(">> SERVER: " + response);
+        network_output.println(name);
+        network_output.println("read");
+
+        int no_messages = Integer.parseInt(network_input.nextLine());
+        while (no_messages-- > 0) {
+            System.out.println("   > " + network_input.nextLine());
+        }
     }
 
     public static void main(String[] args) throws IOException {
@@ -795,10 +812,11 @@ public class EmailClient {
 
         do {
             System.out.print("Enter name('Naruto' or 'Sasuke'): ");
-            name = user_entry.nextLine();
+            name = user_entry.nextLine().trim();
         } while (!name.equals("Naruto") && !name.equals("Sasuke"));
 
         talkToServer();
     }
 }
 ```
+![](../images/02_09.png)
