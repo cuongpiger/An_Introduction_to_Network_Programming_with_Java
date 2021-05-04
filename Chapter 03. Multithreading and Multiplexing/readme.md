@@ -508,3 +508,10 @@ public class CusumerClient {
 ![](../images/03_06.png)
 
 # 6. Non-blocking Servers
+## 6.1. Overview
+* Java I/O sử dụng cơ chế stream, điển hình là object `InputStream`, nó trả về các byte nhận dc. Tuy nhiên có một cơ chế khác dc gọi là **NIO**, thay vì sử dụng cơ chế stream truyền thống thì NIO sử dụng một khái niệm gọi là **channel**. Về cơ bản thay vì dữ liệu dc chuyển thành các byte như cách mà stream hoạt động thì channel sẽ chuyển dữ liệu thành cái **block**, tức dữ liệu sẽ nằm trong các block này thay vì phải phải truyền theo từng byte riêng lẻ từ đó dẫn đến **tốc độ truyền đi sẽ cao hơn**. Mỗi channel dc liên kết vs một **buffer** cụ thể và làm việc trực tiếp trên buffer này tránh các hoạt động trung gian ko cần thiết từ đó dẫn đến việc tăng tốc độ cực lớn.
+* Tuy nhiên, nếu ứng dụng ta có nhiều khách hàng truy cập đồng thời, thì thay vì phân bổ một thread riêng lẻ cho từng khách hàng thì NIO sử dụng cơ chế gọi là ghép kênh _(tức xử lí nhiều kết nối đồng thời bởi một thục thể duy nhất)_.
+* Mặc dù nghe qua cách sử dụng channel đem lại nhiều lợi ích hơn cho với đa luồng, nhưng để implement nó khá là khó khăn.
+
+## 6.2. Implementation
+* Để sử dụng channel, ta thay các object `Socket` thành `SocketChannel` và `ServerSocket` thành `ServerSocketChannel`
