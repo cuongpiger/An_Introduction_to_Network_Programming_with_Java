@@ -169,3 +169,127 @@ public class RunnableHelloCount implements Runnable {
 }
 ```
 ![](../images/03_03.png)
+
+# 3. Multithreaded Servers
+* Dưới đây là demo cho một server tiếp nhận nhiều kết nối từ nhiều client khác nhau.
+###### [MultiEchoServer.java](MultiEchoServer.java)
+```java
+import java.io.*;
+import java.net.*;
+import java.util.Scanner;
+
+class ClientHandler extends Thread {
+    private Socket client;
+    private Scanner input;
+    private PrintWriter output;
+
+    public ClientHandler(Socket socket) {
+        client = socket;
+
+        try {
+            input = new Scanner(client.getInputStream());
+            output = new PrintWriter(client.getOutputStream(), true);
+        } catch (IOException err) {
+            err.printStackTrace();
+        }
+    }
+
+    public void run() {
+        String received;
+
+        do {
+            received = input.nextLine();
+            output.println("ECHO: " + received);
+
+            System.out.println(">> Sending message to " + client.getLocalAddress());
+        } while (!received.equals("QUIT"));
+
+        try {
+            if (client != null) {
+                System.out.println(">> Closing connection...");
+                client.close();
+            }
+        } catch (IOException err) {
+            System.out.println("==> Unable to disconnect!");
+        }
+    }
+}
+
+public class MultiEchoServer {
+    private static ServerSocket server_socket;
+    private static final int PORT = 1234;
+
+    public static void main(String[] args) throws IOException {
+        try {
+            server_socket = new ServerSocket(PORT);
+            System.out.println(">> Opening on PORT " + PORT);
+        } catch (IOException err) {
+            System.out.println("==> Unable to set up port.");
+            System.exit(1);
+        }
+
+        do {
+            Socket client = server_socket.accept();
+            System.out.println(">> New client accepted.");
+
+            ClientHandler handler = new ClientHandler(client);
+            handler.start();
+        } while (true);
+    }
+}
+```
+
+###### [MultiEchoClient.java](MultiEchoClient.java)
+```java
+import javax.annotation.processing.SupportedSourceVersion;
+import java.io.*;
+import java.net.*;
+import java.util.*;
+
+public class MultiEchoClient {
+    private static InetAddress host;
+    private static final int PORT = 1234;
+
+    private static void sendMessages() {
+        Socket socket = null;
+
+        try {
+            socket = new Socket(host, PORT);
+            Scanner network_input = new Scanner(socket.getInputStream());
+            PrintWriter network_output = new PrintWriter(socket.getOutputStream(), true);
+            Scanner user_entry = new Scanner(System.in);
+            String message, response;
+
+            do {
+                System.out.print(">> 'QUIT' to exit: ");
+                message = user_entry.nextLine();
+                network_output.println(message);
+                response = network_input.nextLine();
+                System.out.println(">> SERVER: " + response);
+            } while (!message.equals("QUIT"));
+        } catch (IOException err) {
+            err.printStackTrace();
+        } finally {
+            try {
+                System.out.println(">> Closing connection...");
+                socket.close();
+            } catch (IOException err) {
+                System.out.println("==> Unable to disconnect!");
+                System.exit(1);
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        try {
+            host = InetAddress.getLocalHost();
+        } catch (UnknownHostException err) {
+            System.out.println("==> Host ID not found!");
+            System.exit(1);
+        }
+
+        sendMessages();
+    }
+}
+```
+![](../images/03_05.png)
