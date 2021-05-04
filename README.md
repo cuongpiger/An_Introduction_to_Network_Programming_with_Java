@@ -6,3 +6,7 @@
   ![](./images/book_cover.jpeg)
 
 </div>
+
+# Cài đặt môi trường:
+* Ubuntu 20.04 LTS
+* Java 11 LTS (OpenJDK)
