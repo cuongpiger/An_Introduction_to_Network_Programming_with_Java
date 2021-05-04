@@ -241,7 +241,6 @@ public class MultiEchoServer {
 
 ###### [MultiEchoClient.java](MultiEchoClient.java)
 ```java
-import javax.annotation.processing.SupportedSourceVersion;
 import java.io.*;
 import java.net.*;
 import java.util.*;
@@ -293,3 +292,217 @@ public class MultiEchoClient {
 }
 ```
 ![](../images/03_05.png)
+
+# 4. Locks and Deadlock
+* Cái này biết lâu r 😅.
+
+# 5. Synchronising Threads
+* Để lock một tài nguyên nào đó thì trong Java dùng keyword `synchronized` trc p.thức hoặc khối block cần lock. Vi dụ:
+  ```java
+  public synchronized void updateSum(int amount) {
+      sum += amount;
+  }
+  ```
+* Khi một thread nào đó gọi p.thức `updateSum()`, thì mọi thread khác gọi p.thức này sau thread này sẽ phải chờ cho thread này xong và nhả lock thì các thread khác mới có thể sử dụng dc.
+* Ngoài ra, chúng ta cần tìm hiểu thêm ba p.thức khác là:
+  * `wait()`: dùng để một thread dc chỉ định sẽ chờ cho đến khi nó có cơ hội dc dùng một p.thức `synchronized` nào đó.
+  * `notify()`: khi ta biết chỉ có duy nhất một thread đang chờ, ta dùng p.thức này.
+  * `notifyAll()`: khi có nhiều thread đang chờ một `synchronized`, lúc này Java sẽ tự chọn một thread.
+* Ví dụ dưới đây gồm ba class là `Resource` _(chứa số lượng sản phẩm hiện có)_, `Producer` _(nhà sản xuất sản phẩm cho `Resource`)_ và `ClientThread` _(khách hàng sẽ mua sản phẩm từ `Resource`)_. Ta có giới hạn sản phẩm dc có trong `Resource` dc quy định bằng instance variable `MAX` và số lượng sản phẩm hiện tại có trong kho dc đại diện bởi instance variable `num_resources`. `ClientThread` sẽ mua hàng và mỗi lần mua `ClientThread` chỉ mua duy nhất **1 sản phẩm** thông qua p.thức `Resource.takeOne()`. Trong `Resource.takeOne()` có p.thức `notify()` _(vì chỉ có duy nhất một `Producer` liên kết đến `Resource`)_ để thông báo cho `Producer` tạo ra thêm sản phẩm khi `num_resources < MAX` thông qua p.thức `Resource.addOne()`. Trong p.thức `Resource.addOne()` có p.thức `notifyAll()` _(vì có nhiều `ClientThread` cùng liên kết đến `Resource`)_ để thông báo cho `ClientThread` là có sản phẩm để mua.
+###### [ResourceServer.java](ResourceServer.java)
+```java
+import java.io.*;
+import java.net.*;
+import java.util.*;
+
+class Resource {
+    private int num_resources;
+    private final int MAX = 5;
+
+    public Resource(int start_lv) {
+        num_resources = start_lv;
+    }
+
+    public int getLevel() {
+        return num_resources;
+    }
+
+    public synchronized int addOne() {
+        try {
+            while (num_resources >= MAX) {
+                wait();
+            }
+
+            num_resources += 1;
+            notifyAll(); // wake up any waiting customer
+        } catch (InterruptedException err) {
+            System.out.println("==> Resource.addOne() interrupt: " + err);
+        }
+
+        return num_resources;
+    }
+
+    public synchronized int takeOne() {
+        try {
+            while (num_resources == 0) {
+                wait();
+            }
+
+            num_resources -= 1;
+            notify(); // wake up waiting producer
+        } catch (InterruptedException err) {
+            System.out.println("==> Resource.takeOne() interrupt: " + err);
+        }
+
+        return num_resources;
+    }
+}
+
+class Producer extends Thread {
+    private Resource item;
+
+    public Producer(Resource resource) {
+        item = resource;
+    }
+
+    public void run() {
+        int pause;
+        int new_level;
+
+        do {
+            try {
+                new_level = item.addOne();
+                System.out.println(">> Producer.new_level: " + new_level);
+                pause = (int)(Math.random() * 5000);
+                sleep(pause);
+            } catch (InterruptedException err) {
+                System.out.println("==> Producer.run() interrupt: " + err);
+            }
+        } while (true);
+    }
+}
+
+class ClientThread extends Thread {
+    private Socket client;
+    private Resource item;
+    private Scanner input;
+    private PrintWriter output;
+
+    public ClientThread(Socket socket, Resource resource) {
+        client = socket;
+        item = resource;
+
+        try {
+            input = new Scanner(client.getInputStream());
+            output = new PrintWriter(client.getOutputStream(), true);
+        } catch (IOException err) {
+            System.out.println("==> ClientThread's constructor exception: " + err.toString());
+        }
+    }
+
+    public void run() {
+        String request = "";
+
+        do {
+            request = input.nextLine();
+
+            if (request.equals("1")) {
+                item.takeOne();
+                output.println("Request granted.");
+            }
+        } while (!request.equals("0"));
+
+        try {
+            System.out.println(">> Closing down connection...");
+            client.close();
+        } catch (IOException err) {
+            System.out.println("==> Unable to disconnect to client!");
+        }
+    }
+}
+
+public class ResourceServer {
+    private static ServerSocket server_socket;
+    private static final int PORT = 1234;
+
+    public static void main(String[] args) throws IOException {
+        try {
+            server_socket = new ServerSocket(PORT);
+        } catch (IOException err) {
+            System.out.println("==> Unable to disconnect!");
+            System.exit(1);
+        }
+
+        Resource item = new Resource(1);
+        Producer producer = new Producer(item);
+
+        producer.start();
+
+        do {
+            Socket client = server_socket.accept(); // wait for a client to make connect
+            System.out.println(">> Connect to new client " + client.getInetAddress().getCanonicalHostName());
+            ClientThread handler = new ClientThread(client, item);
+            handler.start();
+        } while (true);
+    }
+}
+```
+
+###### [CusumerClient.java](CusumerClient.java)
+```java
+import java.io.*;
+import java.net.*;
+import java.util.*;
+
+public class CusumerClient {
+    private static InetAddress host;
+    private static final int PORT = 1234;
+
+    private static void sendMessages() {
+        Socket socket = null;
+
+        try {
+            socket = new Socket(host, PORT);
+            Scanner network_input = new Scanner(socket.getInputStream());
+            PrintWriter network_output = new PrintWriter(socket.getOutputStream(), true);
+            Scanner user_entry = new Scanner(System.in);
+            String signal, response;
+
+            while (true) {
+                System.out.print(">> Enter 1 for resource or 0 to quit: ");
+                signal = user_entry.nextLine();
+
+                network_output.println(signal); // send signal to server
+                if (signal.equals("1")) {
+                    response = network_input.nextLine();
+                    System.out.println(">> SERVER: " + response);
+                } else {
+                    break;
+                }
+            }
+        } catch (IOException err) {
+            err.printStackTrace();
+        } finally {
+            try {
+                System.out.println(">> Closing connection...");
+                socket.close();
+            } catch (IOException err) {
+                System.out.println("==> Unable to disconnect!");
+                System.exit(1);
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        try {
+            host = InetAddress.getLocalHost();
+        } catch (UnknownHostException err) {
+            System.out.println("==> Host ID not found!");
+            System.exit(1);
+        }
+
+        sendMessages();
+    }
+}
+```
+![](../images/03_06.png)

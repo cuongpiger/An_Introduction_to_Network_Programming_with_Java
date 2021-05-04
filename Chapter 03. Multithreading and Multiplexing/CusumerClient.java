@@ -2,7 +2,7 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
-public class MultiEchoClient {
+public class CusumerClient {
     private static InetAddress host;
     private static final int PORT = 1234;
 
@@ -14,15 +14,20 @@ public class MultiEchoClient {
             Scanner network_input = new Scanner(socket.getInputStream());
             PrintWriter network_output = new PrintWriter(socket.getOutputStream(), true);
             Scanner user_entry = new Scanner(System.in);
-            String message, response;
+            String signal, response;
 
-            do {
-                System.out.print(">> 'QUIT' to exit: ");
-                message = user_entry.nextLine();
-                network_output.println(message);
-                response = network_input.nextLine();
-                System.out.println(">> SERVER: " + response);
-            } while (!message.equals("QUIT"));
+            while (true) {
+                System.out.print(">> Enter 1 for resource or 0 to quit: ");
+                signal = user_entry.nextLine();
+
+                network_output.println(signal); // send signal to server
+                if (signal.equals("1")) {
+                    response = network_input.nextLine();
+                    System.out.println(">> SERVER: " + response);
+                } else {
+                    break;
+                }
+            }
         } catch (IOException err) {
             err.printStackTrace();
         } finally {
