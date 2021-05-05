@@ -1,0 +1,2 @@
+>> Single line of text!
+>> Ghi thêm dòng này vào file test1.txt
