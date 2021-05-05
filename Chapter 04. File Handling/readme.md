@@ -386,3 +386,217 @@ public class Serialise {
 ```
 ![](../images/04_07.png)
 
+# 7. File I/O with GUIs
+###### [UseFileChooser.java](UseFileChooser.java)
+```java
+import java.awt.*;
+import java.awt.event.*;
+import javax.swing.*;
+import java.io.*;
+import java.util.*;
+
+public class UseFileChooser extends JFrame implements ActionListener {
+    private JPanel display_pnl, button_pnl;
+    private JLabel surname_lbl, firstname_lbl, mark_lbl;
+    private JTextField surname_box, firstname_box, mark_box;
+    private JButton open_btn, next_btn;
+    private Scanner input;
+
+    public UseFileChooser() {
+        setTitle("FileChooser Demo");
+        setLayout(new BorderLayout());
+        display_pnl = new JPanel();
+        display_pnl.setLayout(new GridLayout(3,2));
+        surname_lbl = new JLabel("Surname");
+        firstname_lbl = new JLabel("First names");
+        mark_lbl = new JLabel("Mark");
+        surname_box= new JTextField();
+        firstname_box = new JTextField();
+        mark_box = new JTextField();
+        surname_box.setEditable(false);
+        firstname_box.setEditable(false);
+        mark_box.setEditable(false);
+        display_pnl.add(surname_lbl);
+        display_pnl.add(surname_box);
+        display_pnl.add(firstname_lbl);
+        display_pnl.add(firstname_box);
+        display_pnl.add(mark_lbl);
+        display_pnl.add(mark_box);
+        add(display_pnl, BorderLayout.NORTH);
+        button_pnl = new JPanel();
+        button_pnl.setLayout(new FlowLayout());
+        open_btn = new JButton("Open File");
+        open_btn.addActionListener(this);
+        next_btn = new JButton("Next Record");
+        next_btn.addActionListener(this);
+        next_btn.setEnabled(false);
+        button_pnl.add(open_btn);
+        button_pnl.add(next_btn);
+        add(button_pnl, BorderLayout.SOUTH);
+
+        addWindowListener(
+                new WindowAdapter() {
+                    public void windowClosing(WindowEvent event) {
+                        if (input != null) // file is opening.
+                            input.close();
+
+                        System.exit(0);
+                    }
+                }
+        );
+    }
+
+    public void actionPerformed(ActionEvent ev) {
+        if (ev.getSource() == open_btn) {
+            try {
+                openFile();
+            } catch (IOException err) {
+                JOptionPane.showMessageDialog(this, "Unable to open file!");
+            }
+        } else {
+            try {
+                readRecord();
+            } catch (EOFException err) {
+                next_btn.setEnabled(false);
+                JOptionPane.showMessageDialog(this, "In complete record!\nEnd of file reached.");
+            } catch (IOException err) {
+                JOptionPane.showMessageDialog(this, "Unable to read file!");
+            }
+        }
+    }
+
+    public void openFile() throws IOException {
+        if (input != null) {
+            input.close();
+            input = null;
+        }
+
+        JFileChooser file_chooser = new JFileChooser();
+        file_chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+
+        int selection = file_chooser.showOpenDialog(null);
+        if (selection == JFileChooser.CANCEL_OPTION) return;
+
+        File results = file_chooser.getSelectedFile();
+        if (results == null || results.getName().isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Invalid selection!");
+            return;
+        }
+
+        input = new Scanner(results);
+        readRecord(); // read and display first record
+        next_btn.setEnabled(true);
+    }
+
+    public void readRecord() throws IOException {
+        String surname, firstname, textmark;
+
+        surname_box.setText("");
+        firstname_box.setText("");
+        mark_box.setText("");
+
+        if (input.hasNext()) {
+            surname = input.nextLine();
+            surname_box.setText(surname);
+        } else {
+            JOptionPane.showMessageDialog(this, "End of file reached.");
+            next_btn.setEnabled(false);
+
+            return;
+        }
+
+        if (!input.hasNext()) throw (new EOFException());
+
+        // otherwise
+        firstname = input.nextLine();
+        firstname_box.setText(firstname);
+
+        if (!input.hasNext()) throw (new EOFException());
+
+        // otherwise
+        textmark = input.nextLine();
+        mark_box.setText(textmark);
+    }
+
+    public static void main(String[] args) {
+        UseFileChooser frame = new UseFileChooser();
+        frame.setSize(350, 150);
+        frame.setVisible(true);
+    }
+}
+```
+![](../images/04_08.png)
+
+# 8. ArrayLists
+# 9. ArrayLists and Serialisation
+###### [ArrayListSerialise.java](ArrayListSerialise.java)
+```java
+import java.io.*;
+import java.util.*;
+
+class Personnel implements Serializable {
+    private long payroll_num;
+    private String surname;
+    private String firstname;
+
+    public Personnel(long p, String s, String f) {
+        payroll_num = p;
+        surname = s;
+        firstname = f;
+    }
+
+    public long get_payroll_num() {
+        return payroll_num;
+    }
+
+    public String get_surname() {
+        return surname;
+    }
+
+    public String get_firstname() {
+        return firstname;
+    }
+
+    public void set_surname(String s) {
+        surname = s;
+    }
+}
+
+public class ArrayListSerialise {
+    public static void main(String[] args) throws IOException, ClassNotFoundException {
+        String file_name = "./data/personnel_list.dat";
+        ObjectOutputStream out_stream = new ObjectOutputStream(new FileOutputStream(file_name));
+        ArrayList<Personnel> staff_list_out = new ArrayList<>();
+        ArrayList<Personnel> staff_list_in = new ArrayList<>();
+
+        Personnel[] staff = {
+                new Personnel(123456, "Duong", "Cuong"),
+                new Personnel(234567, "Nguyen", "Que"),
+                new Personnel(345678, "Pham", "Diem")
+        };
+
+        for (var ob : staff) staff_list_out.add(ob);
+        out_stream.writeObject(staff_list_out);
+        out_stream.close();
+
+        ObjectInputStream in_stream = new ObjectInputStream(new FileInputStream(file_name));
+        int staff_count = 0;
+
+        try {
+            staff_list_in = (ArrayList<Personnel>) in_stream.readObject();
+            for (var person : staff_list_in) {
+                System.out.println(">> Staff member: " + ++staff_count);
+                System.out.println("   >> Payroll number: " + person.get_payroll_num());
+                System.out.println("   >> Surname: " + person.get_surname());
+                System.out.println("   >> Firstname: " + person.get_firstname());
+            }
+
+            System.out.println("\n");
+        } catch (EOFException err) {
+            System.out.println("--> End of file.");
+            in_stream.close();
+        }
+    }
+}
+```
+![](../images/04_09.png)
