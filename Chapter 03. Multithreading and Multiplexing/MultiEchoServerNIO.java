@@ -72,7 +72,7 @@ public class MultiEchoServerNIO {
             try {
                 buffer.flip(); // đặt con trỏ lại vào đầu bộ đệm
                 while (buffer.remaining() > 0) {
-                    socket_channel.write(buffer);
+                    socket_channel.write(buffer); // send data
                 }
             } catch (IOException err) {
                 System.out.println(">> Closing socket " + socket + "...");
