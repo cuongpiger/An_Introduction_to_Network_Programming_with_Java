@@ -71,3 +71,32 @@ public class FileTest2 {
 ![](../images/04_02.png)
 > * Tuy nhiên khi ta chạy lần nữa thì file `test2.txt` sẽ bị ghi đè.
 
+<hr>
+
+* Chương trình dưới đây sẽ đọc file `test2.txt` ở trên và tiến hành đọc từng dòng sau đó tính mean.
+###### [FileTest3.java](FileTest3.java)
+```java
+import java.io.*;
+import java.util.*;
+
+public class FileTest3 {
+    public static void main(String[] args) throws IOException {
+        int mark, total = 0, count = 0;
+        String file_name = "./data/test2.txt";
+        Scanner input = new Scanner(new File(file_name));
+
+        while (input.hasNext()) { // kiểm tra cuối file hay chưa
+            mark = input.nextInt();
+            total += mark;
+            count += 1;
+        }
+
+        input.close();
+
+        System.out.println(">> Mean = " + (float) (total / count));
+    }
+}
+```
+![](../images/04_03.png)
+
+# 2. File Methods
