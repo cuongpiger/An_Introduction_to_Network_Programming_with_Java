@@ -739,3 +739,5 @@ public class PersonnelClient {
 }
 ```
 ![](../images/04_10.png)
+
+# 10. Vectors Versus ArrayLists
